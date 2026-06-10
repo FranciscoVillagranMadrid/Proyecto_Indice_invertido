@@ -34,7 +34,7 @@ class ListaTerminos:
         self.head = None
         self.tamaño = 0
 
-    #inserta un valor en la lista como si fuera una pila
+    #inserta un valor al inicio de la lista enlazada
     def insertar(self, termino):
         
         if termino == "" or self.contiene(termino):#si el termino es "" o el termino ya esta en la lista no se agrega
@@ -80,7 +80,7 @@ class ListaPosts:
         self.head = None
         self.tamaño = 0
 
-    #inserta los post a la lista en forma de pila
+    #inserta los post al inicio de la lista enlazada
     def insertar(self, post):
         
         if post is None or self.contiene_id(post.post_id): #si el post es nulo o ya está su id dentro de la lista no se inserta
@@ -126,7 +126,7 @@ class ListaUsuarios:
         self.head = None
         self.tamaño = 0
 
-    #inserta los username a la lista en forma de pila
+    #inserta los username al inicio de la lista enlazada
     def insertar(self, username):
         
         if username == "" or self.contiene(username): #si el username es "" o la lista ya tiene el username no se agrega
@@ -175,7 +175,7 @@ class ListaLikes:
         self.head = None
         self.tamaño = 0
 
-   #inserta los likes simbolicos a la lista en forma de pila
+    #inserta los likes simbolicos al inicio de la lista enlazada
     def insertar(self, username):
         
         if username == "" or self.contiene(username): #si el username es "" o ya existe dentro de la lista no se agrega

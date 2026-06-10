@@ -3,6 +3,8 @@
 #importa las listas y los indices invertidos ya creados
 from listas import ListaUsuarios, ListaLikes, ListaTerminos
 from indices import FiltroStopwords, IndiceInvertidoPosts, IndiceInvertidoUsuarios
+from grafo_contactos import GrafoContactos      #entrega 2: grafo de contactos
+from tabla_hash import TablaHashTerminos        #entrega 3: tabla hash de terminos
 
 #separador de los archivos csv
 SEPARADOR = "|"
@@ -59,6 +61,8 @@ class SistemaRedSocial:
         self.indice_posts = IndiceInvertidoPosts() #indice invertido para los post
         self.indice_usuarios = IndiceInvertidoUsuarios() #indice invertido para los usuarios
         self.total_relaciones = 0 #cantidad total de relaciones cargadas en los archivos
+        self.grafo = GrafoContactos() #grafo de contactos para la entrega 2
+        self.tabla_hash = TablaHashTerminos() #tabla hash de terminos para la entrega 3
 
     #funcion que transforma texto a numeros para leer los archivos csv
     def numero(self, texto):
@@ -173,9 +177,20 @@ class SistemaRedSocial:
             linea = archivo.readline() #lee la siguiente linea del archivo
 
         archivo.close() #cierra el archivo
+
     #funcion que construye el indice invertido de los post
     def construir_indices(self):
         self.indice_posts.construir(self.posts, self.filtro) #construye el indice usando los posts guardados y el filtro de stopwords
+
+    #construye el grafo de contactos a partir del indice de usuarios ya cargado
+    def construir_grafo(self):
+        self.grafo.construir_desde_indice(self.indice_usuarios)
+
+    #construye la tabla hash de frecuencia de terminos
+    #depende de que construir_indices() haya sido llamado primero
+    def construir_tabla_hash(self):
+        cantidad_unicos = self.indice_posts.total_terminos() #N sale del vocabulario ya creado en el indice
+        self.tabla_hash.construir(self.posts, self.filtro, cantidad_unicos) #cuenta las apariciones reales en los textos
 
     #funcion que busca post a través del termino
     def buscar_posts(self, termino):
@@ -196,11 +211,18 @@ class SistemaRedSocial:
 
     #funcion que muestra el resumen de los datos cargados e indexados
     def mostrar_resumen(self):
-        print("Usuarios cargados:", len(self.usuarios))
-        print("Posts cargados:", len(self.posts))
-        print("Relaciones cargadas:", self.total_relaciones)
-        print("Stopwords cargadas:", self.filtro.total())
-        print("Términos indexados:", self.indice_posts.total_terminos())
+        print("Usuarios cargados          :", len(self.usuarios))
+        print("Posts cargados             :", len(self.posts))
+        print("Relaciones cargadas        :", self.total_relaciones)
+        print("Stopwords cargadas         :", self.filtro.total())
+        print("Terminos indexados         :", self.indice_posts.total_terminos())
+        print("Usuarios en el grafo       :", self.grafo.total_usuarios())
+        print("Aristas del grafo          :", self.grafo.total_aristas())
+        if self.grafo.validar_simetria():
+            print("Grafo no dirigido          : OK, relaciones simetricas")
+        else:
+            print("Grafo no dirigido          : Revisar simetria")
+        print("Terminos en tabla hash     :", self.tabla_hash.cantidad_terminos)
 
 #funcion que muestra los posts encontrados hasta un maximo
 def mostrar_posts(posts, maximo):
@@ -249,20 +271,23 @@ def main():
     sistema.cargar_usuarios("usuarios.csv") #carga los usuarios desde el csv
     sistema.cargar_posts("posts.csv") #carga los posts desde el csv
     sistema.cargar_relaciones("relaciones.csv") #carga las relaciones entre usuarios
-    sistema.construir_indices() #construye el indice invertido de los posts
+    sistema.construir_indices()      #construye el indice invertido de los posts
+    sistema.construir_grafo()        #construye el grafo de contactos (entrega 2)
+    sistema.construir_tabla_hash()   #construye la tabla hash de terminos (entrega 3)
 
     print("\nResumen de carga inicial")
     sistema.mostrar_resumen() #muestra el resumen inicial para comprobar que todo se cargo bien
 
-    opcion = "" #guarda la opcion que ingresa el usuario
-
-    while opcion != "5": #mientras la opcion no sea salir, el menu sigue funcionando
+    while True: #el menu sigue activo hasta que el usuario elija salir con la opcion 8
         print("\n===== RED SOCIAL - INDICE INVERTIDO =====")
         print("1. Buscar posts por termino / palabra clave")
-        print("2. Buscar usuario y mostrar contactos")
+        print("2. Buscar usuario y mostrar contactos directos")
         print("3. Mostrar algunos posts cargados")
         print("4. Mostrar resumen de carga")
-        print("5. Salir")
+        print("5. Buscar contactos por grado (BFS)")
+        print("6. Mostrar Top-N terminos frecuentes")
+        print("7. Mostrar metricas de tabla hash")
+        print("8. Salir")
 
         opcion = input("Seleccione una opcion: ").strip() #lee la opcion elegida por el usuario
 
@@ -326,7 +351,40 @@ def main():
             sistema.mostrar_resumen()
 
         elif opcion == "5":
-            print("Programa finalizado.")
+            #busca contactos de un usuario por grado (1°, 2° y 3°) usando BFS
+            usuario_raiz = input("Ingrese el username para buscar por grados: ").strip()
+
+            if usuario_raiz == "":
+                print("Debe ingresar un username.")
+            else:
+                sistema.grafo.mostrar_contactos_grado(usuario_raiz, 3)
+
+        elif opcion == "6":
+            #muestra los terminos mas frecuentes usando la tabla hash
+            print("Seleccione la cantidad de terminos a mostrar: 5, 10 o 20")
+            sub = input("Cantidad: ").strip()
+
+            if sub not in ("5", "10", "20"):
+                print("Opcion no valida. Ingrese 5, 10 o 20.")
+            else:
+                n = int(sub)
+                top = sistema.tabla_hash.obtener_top(n)
+
+                if len(top) == 0:
+                    print("No hay terminos en la tabla hash.")
+                else:
+                    print("\nTop " + str(n) + " terminos mas frecuentes:")
+                    i = 0
+                    while i < len(top):
+                        print(str(i + 1) + ". " + top[i].termino + "  (frecuencia: " + str(top[i].frecuencia) + ")")
+                        i = i + 1
+
+        elif opcion == "7":
+            #muestra N, M, factor de carga, colisiones y largo de cadenas
+            sistema.tabla_hash.mostrar_metricas()
+
+        elif opcion == "8":
+            break  #sale del while True para terminar el programa
 
         else:
             print("Opcion no valida. Intente nuevamente.")
