@@ -220,6 +220,9 @@ class TablaHashTerminos:
             while j < len(todos): #busca el mayor en la lista que queda
                 if todos[j].frecuencia > todos[indice_mayor].frecuencia:
                     indice_mayor = j
+                elif todos[j].frecuencia == todos[indice_mayor].frecuencia:
+                    if todos[j].termino < todos[indice_mayor].termino:
+                        indice_mayor = j #si empatan, ordena alfabeticamente
                 j = j + 1
 
             resultado.append(todos[indice_mayor]) #agrega el mayor encontrado

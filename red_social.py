@@ -184,6 +184,11 @@ class SistemaRedSocial:
 
     #construye el grafo de contactos a partir del indice de usuarios ya cargado
     def construir_grafo(self):
+        #primero registra cada vertice con referencia al objeto Usuario del sistema
+        for username in self.usuarios:
+            self.grafo.agregar_usuario(username, self.usuarios[username])
+
+        #despues agrega las aristas usando el indice invertido de usuarios
         self.grafo.construir_desde_indice(self.indice_usuarios)
 
     #construye la tabla hash de frecuencia de terminos
@@ -223,6 +228,12 @@ class SistemaRedSocial:
         else:
             print("Grafo no dirigido          : Revisar simetria")
         print("Terminos en tabla hash     :", self.tabla_hash.cantidad_terminos)
+        if self.tabla_hash.tabla is not None:
+            factor = round(self.tabla_hash.cantidad_terminos / self.tabla_hash.tamano_tabla, 4)
+            print("M tabla hash               :", self.tabla_hash.tamano_tabla)
+            print("Factor de carga hash       :", factor)
+            print("Colisiones hash            :", self.tabla_hash.contar_colisiones())
+            print("Largo maximo cadena hash   :", self.tabla_hash.largo_maximo_cadena())
 
 #funcion que muestra los posts encontrados hasta un maximo
 def mostrar_posts(posts, maximo):
@@ -279,7 +290,7 @@ def main():
     sistema.mostrar_resumen() #muestra el resumen inicial para comprobar que todo se cargo bien
 
     while True: #el menu sigue activo hasta que el usuario elija salir con la opcion 8
-        print("\n===== RED SOCIAL - INDICE INVERTIDO =====")
+        print("\n===== RED SOCIAL - INDICE, GRAFO Y HASH =====")
         print("1. Buscar posts por termino / palabra clave")
         print("2. Buscar usuario y mostrar contactos directos")
         print("3. Mostrar algunos posts cargados")

@@ -11,11 +11,22 @@ class GrafoContactos:
     # inicializa el grafo con un diccionario vacio de adyacencia
     def __init__(self):
         self.adyacencia = {}  # username -> ListaUsuarios con sus vecinos
+        self.referencias_usuarios = {}  # username -> objeto Usuario del sistema
 
     # registra un usuario en el grafo si todavia no existe
-    def agregar_usuario(self, usuario):
+    # referencia permite guardar el objeto Usuario asociado al vertice
+    def agregar_usuario(self, usuario, referencia=None):
         if usuario != "" and usuario not in self.adyacencia:
             self.adyacencia[usuario] = ListaUsuarios()  # lista vacia de vecinos
+
+        if usuario != "" and referencia is not None:
+            self.referencias_usuarios[usuario] = referencia
+
+    # retorna la referencia al objeto Usuario si fue registrada
+    def obtener_referencia_usuario(self, usuario):
+        if usuario in self.referencias_usuarios:
+            return self.referencias_usuarios[usuario]
+        return None
 
     # agrega una arista entre dos usuarios en ambos sentidos
     # si la arista ya existe, ListaUsuarios.insertar la ignora automaticamente

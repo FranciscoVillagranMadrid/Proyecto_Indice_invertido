@@ -50,6 +50,8 @@ La estructura usada es:
 usuario -> ListaUsuarios enlazada de vecinos
 ```
 
+Además, al construir el grafo desde el sistema principal, cada vértice queda asociado a la referencia del objeto `Usuario` correspondiente. Esto mantiene la relación con los datos cargados desde la Entrega I y evita que el grafo sea una estructura separada sin contexto.
+
 La búsqueda BFS permite mostrar contactos de:
 
 ```text
@@ -58,7 +60,7 @@ La búsqueda BFS permite mostrar contactos de:
 3° grado
 ```
 
-El recorrido evita duplicados y evita que el usuario raíz aparezca como contacto de sí mismo.
+El recorrido evita duplicados y evita que el usuario raíz aparezca como contacto de sí mismo. Cada nivel se ordena alfabéticamente solo al momento de mostrarlo, para que la demo sea más clara.
 
 ## Entrega III: Tabla hash de términos
 
@@ -94,6 +96,8 @@ Top 5
 Top 10
 Top 20
 ```
+
+Cuando dos términos tienen la misma frecuencia, se ordenan alfabéticamente. Esto no cambia el conteo, pero deja la salida más estable para la defensa.
 
 ## Menú principal
 
