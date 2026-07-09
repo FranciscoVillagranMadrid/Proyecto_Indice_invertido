@@ -1,179 +1,270 @@
 # Sistema de Red Social con Índice Invertido, Grafo y Tabla Hash
 
-Proyecto semestral para **ICI313 - Estructuras de Datos**.
+Proyecto semestral de **ICI313 - Estructuras de Datos**.
 
-El proyecto trabaja con datos de Reddit/Pushshift y modela una red social simple. La primera parte permite buscar posts por términos y contactos por usuario usando índices invertidos. La segunda parte agrega un grafo no dirigido de contactos y búsqueda por grados usando BFS. La tercera parte agrega una tabla hash propia para contar frecuencia de términos.
+El sistema procesa datos adaptados de Reddit/Pushshift y reúne las tres etapas del proyecto en una sola aplicación. La Entrega I proporciona los índices invertidos y las listas enlazadas base; la Entrega II incorpora un grafo no dirigido de contactos y un recorrido BFS por grados; la Entrega III agrega una tabla hash propia para contabilizar la frecuencia de los términos del dataset.
 
-## Archivos principales
+## Requisitos y ejecución
 
-```text
-listas.py              Nodos y listas enlazadas propias.
-indices.py             Stopwords e índices invertidos de posts y usuarios.
-grafo_contactos.py     Grafo no dirigido y BFS por grados.
-tabla_hash.py          Tabla hash propia con djb2 y encadenamiento separado.
-red_social.py          Programa principal y menú de prueba.
-preprocesar_reddit.py  Archivo auxiliar para preparar el dataset original.
-usuarios.csv           Usuarios ya preparados.
-posts.csv              Posts ya preparados.
-relaciones.csv         Relaciones/contactos ya preparados.
-stopwords.txt          Palabras comunes que se filtran.
-```
+- Python 3.
+- No se requieren bibliotecas externas.
+- Los archivos CSV y `stopwords.txt` deben permanecer en la misma carpeta que el programa principal.
 
-## Cómo ejecutar
+Para ejecutar:
 
 ```bash
 python red_social.py
 ```
 
-El programa carga los archivos CSV, construye los índices invertidos, construye el grafo, construye la tabla hash y muestra el menú principal.
+El programa carga los datos, construye los índices invertidos, genera el grafo, construye la tabla hash y habilita el menú de consultas.
 
-## Entrega I: Índices invertidos
-
-Se implementan dos índices principales:
+## Archivos del proyecto
 
 ```text
-termino -> ListaPosts enlazada
-usuario -> ListaUsuarios enlazada
+listas.py                      Nodos y listas enlazadas propias.
+indices.py                     Filtro de stopwords e índices invertidos.
+grafo_contactos.py             Grafo no dirigido y recorrido BFS por niveles.
+tabla_hash.py                  Tabla hash djb2 con encadenamiento separado.
+red_social.py                  Entidades, carga de datos, integración y menú principal.
+preprocesar_reddit.py          Preparación del dataset original de Reddit.
+usuarios.csv                   Usuarios procesados.
+posts.csv                      Publicaciones procesadas.
+relaciones.csv                 Relaciones de contacto procesadas.
+stopwords.txt                  Palabras excluidas durante la indexación.
+red_social_presentacion_final.pptx  Presentación de las Entregas II y III.
 ```
 
-Los diccionarios se usan como mapa para llegar rápido a la clave, pero los valores son listas enlazadas propias implementadas en `listas.py`.
-
-También se usa un filtro de stopwords para eliminar palabras comunes antes de construir el índice y antes de procesar consultas.
-
-## Entrega II: Grafo de contactos y BFS
-
-El grafo se construye desde el índice de usuarios/contactos. Es un grafo no dirigido, por lo que si un usuario A está conectado con B, también se guarda la conexión de B hacia A.
-
-La estructura usada es:
+## Flujo general del sistema
 
 ```text
-usuario -> ListaUsuarios enlazada de vecinos
+Carga de stopwords
+        ↓
+Carga de usuarios, posts y relaciones
+        ↓
+Construcción de índices invertidos
+        ↓
+Construcción del grafo de contactos
+        ↓
+Construcción de la tabla hash de términos
+        ↓
+Consultas desde el menú principal
 ```
 
-Además, al construir el grafo desde el sistema principal, cada vértice queda asociado a la referencia del objeto `Usuario` correspondiente. Esto mantiene la relación con los datos cargados desde la Entrega I y evita que el grafo sea una estructura separada sin contexto.
+## Entrega I: estructuras base e índices invertidos
 
-La búsqueda BFS permite mostrar contactos de:
+La Entrega I proporciona las listas enlazadas propias utilizadas en las etapas posteriores y dos índices principales:
 
 ```text
-1° grado
-2° grado
-3° grado
+término  -> ListaPosts enlazada
+usuario  -> ListaUsuarios enlazada de contactos
 ```
 
-El recorrido evita duplicados y evita que el usuario raíz aparezca como contacto de sí mismo. Cada nivel se ordena alfabéticamente solo al momento de mostrarlo, para que la demo sea más clara.
+Los diccionarios se utilizan como mapas de acceso a las claves. Los valores asociados a cada clave son listas enlazadas implementadas en `listas.py`.
 
-## Entrega III: Tabla hash de términos
+El filtro de stopwords normaliza los términos, elimina palabras comunes, descarta números aislados y omite palabras de longitud menor o igual a dos caracteres.
 
-Se implementa una tabla hash propia para contar frecuencia de términos. No se usa `dict` de Python como tabla hash.
+## Entrega II: grafo no dirigido y BFS
 
-Características:
+### Representación del grafo
+
+El grafo se construye a partir del índice invertido de usuarios de la Entrega I. Cada vértice se identifica por su `username`, mantiene una referencia al objeto `Usuario` correspondiente y posee una lista enlazada de vecinos:
 
 ```text
-Función hash: djb2
-Truncado a 32 bits: hash_val &= 0xFFFFFFFF
-Colisiones: encadenamiento separado
-Cada casilla: ListaTerminosHash enlazada
-M: primer primo que cumple M >= 1.5 * N
+username -> ListaUsuarios enlazada de contactos
 ```
 
-La frecuencia se cuenta recorriendo el texto de los posts y agregando cada aparición válida del término. Se filtran stopwords, números solos y palabras muy cortas.
+Las relaciones son no dirigidas. Al agregar una conexión entre `A` y `B`, se registra `B` en la lista de `A` y `A` en la lista de `B`.
 
-## Métricas que muestra el programa
+La implementación evita:
+
+- bucles, rechazando relaciones donde `usuario == contacto`;
+- aristas duplicadas, mediante la verificación previa de la lista enlazada;
+- pérdida de simetría, mediante `validar_simetria()`.
+
+### Recorrido por grados
+
+`obtener_contactos_grado()` implementa BFS con control explícito de niveles. El recorrido utiliza una cola para el nivel actual, otra para el nivel siguiente y una estructura de visitados para impedir ciclos y repeticiones.
+
+La función separa los resultados en:
 
 ```text
-N: términos únicos
-M: tamaño de la tabla hash
-Factor de carga: N / M
-Total de colisiones
-Largo máximo de cadena
-Promedio de cadenas no vacías
+1° grado: contactos directos del usuario raíz.
+2° grado: contactos nuevos descubiertos desde el primer nivel.
+3° grado: contactos nuevos descubiertos desde el segundo nivel.
 ```
 
-También permite consultar Top-N términos frecuentes para:
+El usuario raíz se marca como visitado antes de iniciar el recorrido, por lo que no puede reaparecer en niveles posteriores. Cada usuario se incorpora una sola vez, en el primer nivel donde es descubierto.
+
+### Complejidad
+
+En el peor caso, el recorrido BFS tiene:
 
 ```text
-Top 5
-Top 10
-Top 20
+Tiempo:  O(V + E)
+Memoria: O(V)
 ```
 
-Cuando dos términos tienen la misma frecuencia, se ordenan alfabéticamente. Esto no cambia el conteo.
+`V` corresponde a los usuarios del grafo y `E` a las aristas. En esta implementación el recorrido se detiene al completar el tercer grado.
+
+## Entrega III: tabla hash de frecuencia de términos
+
+### Objetivo
+
+La tabla hash registra la frecuencia total de cada término válido en todos los textos. Esta información es distinta de la almacenada en el índice invertido:
+
+```text
+Índice invertido: término -> posts donde aparece.
+Tabla hash:        término -> cantidad total de apariciones.
+```
+
+El índice invertido entrega el tamaño del vocabulario único `N`. Posteriormente, la tabla hash vuelve a recorrer los textos para contabilizar todas las apariciones, incluidas las repeticiones dentro de un mismo post.
+
+### Estructura
+
+La tabla se implementa como un arreglo de `M` casillas. Cada casilla contiene una `ListaTerminosHash` enlazada propia:
+
+```text
+TablaHashTerminos
+    -> arreglo de M casillas
+        -> ListaTerminosHash
+            -> NodoTerminoHash(termino, frecuencia, siguiente)
+```
+
+No se utiliza un `dict` de Python para reemplazar la tabla hash de frecuencia.
+
+### Función hash djb2
+
+`calcular_hash()` utiliza la función djb2:
+
+```text
+hash inicial = 5381
+hash = hash * 33 + valor del carácter
+```
+
+En el código, la multiplicación por 33 se implementa como:
+
+```python
+(valor_hash << 5) + valor_hash
+```
+
+Después de procesar cada carácter, el valor se trunca a 32 bits:
+
+```python
+valor_hash &= 0xFFFFFFFF
+```
+
+Finalmente, el índice de la tabla se obtiene mediante:
+
+```python
+valor_hash % M
+```
+
+### Dimensionamiento
+
+El tamaño de la tabla se calcula dinámicamente como el menor número primo que cumple:
+
+```text
+M >= 1.5 * N
+```
+
+Con los archivos incluidos:
+
+```text
+N = 304 términos únicos
+1.5 * N = 456
+M = 457, primer número primo mayor o igual a 456
+Factor de carga α = N / M = 0.6652
+```
+
+### Resolución de colisiones
+
+Las colisiones se resuelven mediante encadenamiento separado. Cuando dos términos distintos generan el mismo índice, ambos se almacenan como nodos diferentes dentro de la lista enlazada de esa casilla.
+
+Si el término ya existe en la cadena, no se crea un nodo nuevo; se incrementa su frecuencia.
+
+### Consulta Top-N
+
+`obtener_top()` permite recuperar los términos de mayor frecuencia para valores de `N` iguales a 5, 10 y 20. La selección se realiza manualmente y, en caso de empate de frecuencia, se utiliza el orden alfabético para mantener una salida determinista.
+
+### Métricas de la tabla
+
+El programa reporta:
+
+```text
+N: cantidad de términos únicos.
+M: cantidad de casillas de la tabla.
+Factor de carga: N / M.
+Total de colisiones.
+Largo máximo de cadena.
+Largo promedio de las cadenas no vacías.
+```
+
+Resultados obtenidos con el dataset incluido:
+
+```text
+N                              : 304
+M                              : 457
+Factor de carga                : 0.6652
+Total de colisiones            : 91
+Largo máximo de cadena         : 4
+Promedio de cadenas no vacías  : 1.43
+```
+
+## Resultados del grafo con el dataset incluido
+
+```text
+Usuarios cargados              : 30
+Posts cargados                 : 50
+Entradas de contacto almacenadas: 64
+Usuarios en el grafo           : 30
+Aristas no dirigidas           : 32
+```
+
+Cada arista no dirigida se almacena en ambos sentidos en la lista de adyacencia. Por esta razón, 64 entradas dirigidas corresponden a 32 aristas no dirigidas.
+
+## Funciones principales
+
+### Grafo
+
+```text
+GrafoContactos.agregar_usuario()            registra un vértice y su referencia.
+GrafoContactos.agregar_contacto()           agrega una arista en ambos sentidos.
+GrafoContactos.construir_desde_indice()     construye el grafo desde la Entrega I.
+GrafoContactos.obtener_contactos_grado()    ejecuta BFS hasta el grado solicitado.
+GrafoContactos.validar_simetria()            verifica que cada relación sea bidireccional.
+GrafoContactos.total_aristas()               cuenta cada arista no dirigida una sola vez.
+```
+
+### Tabla hash
+
+```text
+TablaHashTerminos.calcular_hash()            implementa djb2 y obtiene la casilla.
+TablaHashTerminos.calcular_tamano()          calcula el primer primo válido para M.
+TablaHashTerminos.construir()                procesa los posts y cuenta términos.
+TablaHashTerminos.insertar()                 inserta o actualiza una frecuencia.
+TablaHashTerminos.obtener_top()              obtiene los términos más frecuentes.
+TablaHashTerminos.mostrar_metricas()         presenta las métricas de la tabla.
+```
 
 ## Menú principal
 
 ```text
-1. Buscar posts por termino / palabra clave
-2. Buscar usuario y mostrar contactos directos
-3. Mostrar algunos posts cargados
-4. Mostrar resumen de carga
-5. Buscar contactos por grado (BFS)
-6. Mostrar Top-N terminos frecuentes
-7. Mostrar metricas de tabla hash
-8. Salir
+1. Buscar posts por término o palabra clave.
+2. Buscar un usuario y mostrar sus contactos directos.
+3. Mostrar algunos posts cargados.
+4. Mostrar el resumen de estructuras y datos.
+5. Consultar contactos de 1°, 2° y 3° grado mediante BFS.
+6. Consultar Top-5, Top-10 o Top-20 términos.
+7. Mostrar las métricas de la tabla hash.
+8. Salir.
 ```
 
-## Adaptación del dataset Reddit
+## Adaptación del dataset
 
-Reddit no entrega amigos directos como Facebook, por eso los contactos se modelan desde interacciones o co-participación. Además, Reddit entrega `score`, pero no entrega la identidad real de cada usuario que votó, por eso los likes se representan como likes simbólicos desde el score.
+Reddit no proporciona una lista de amigos equivalente a la de otras redes sociales. Por este motivo, las relaciones del proyecto se generan a partir de interacciones y co-participación de usuarios.
 
-## Nota sobre memoria dinámica
+Reddit tampoco entrega la identidad individual de quienes realizaron cada voto. El atributo `score` se utiliza únicamente para generar likes simbólicos dentro del modelo de la Entrega I.
 
-Los límites de carga del dataset no vuelven estáticas las estructuras. Solo controlan cuántos datos se leen para la demostración. Los nodos de listas enlazadas, listas de adyacencia y cadenas de la tabla hash se crean durante la ejecución.
+## Creación dinámica de estructuras
 
-## Datos de defensa para Entrega II y III
-
-### Parametros reales de esta ejecucion
-
-Con los archivos incluidos en este proyecto, el programa reporta:
-
-```text
-Usuarios cargados          : 30
-Posts cargados             : 50
-Relaciones cargadas        : 64
-Terminos indexados / N     : 304
-Usuarios en el grafo       : 30
-Aristas del grafo          : 32
-M tabla hash               : 457
-Factor de carga N/M        : 0.6652
-Total de colisiones        : 91
-Largo maximo de cadena     : 4
-Promedio cadenas no vacias : 1.43
-```
-
-La relacion entre `Relaciones cargadas` y `Aristas del grafo` puede verse asi: en el archivo y en el indice se guarda cada contacto en ambos sentidos para asegurar la simetria, pero en el grafo cada amistad real se cuenta una sola vez como arista no dirigida. Por eso 64 relaciones dirigidas equivalen a 32 aristas no dirigidas.
-
-### Complejidad del BFS
-
-El BFS por grados usa una cola por niveles y marca los usuarios visitados para no repetirlos. En el peor caso, si alcanza muchos usuarios, su complejidad es:
-
-```text
-Tiempo: O(V + E)
-Memoria: O(V)
-```
-
-Donde `V` es la cantidad de usuarios del grafo y `E` la cantidad de relaciones/aristas. En este proyecto se corta en grado 3 porque la pauta solo pide contactos de 1°, 2° y 3° grado.
-
-### Funciones principales para defender
-
-```text
-GrafoContactos.agregar_contacto()          agrega aristas en ambos sentidos
-GrafoContactos.construir_desde_indice()    arma el grafo desde el indice de usuarios
-GrafoContactos.obtener_contactos_grado()   aplica BFS por niveles hasta grado 3
-GrafoContactos.validar_simetria()          comprueba que A-B tambien exista como B-A
-TablaHashTerminos.calcular_hash()          implementa djb2 con truncado a 32 bits
-TablaHashTerminos.construir()              cuenta apariciones reales de terminos
-TablaHashTerminos.obtener_top()            retorna los terminos mas frecuentes
-TablaHashTerminos.mostrar_metricas()       muestra N, M, factor de carga y colisiones
-```
-
-### Usuarios sugeridos para la demo
-
-Para mostrar que la Entrega II funciona, se pueden usar estos usuarios:
-
-```text
-spez
-karmanaut
-gallowboob
-```
-
-Los tres entregan contactos separados en 1°, 2° y 3° grado, sin repetir usuarios entre niveles.
+Los límites utilizados durante la carga controlan la cantidad de registros procesados, pero no convierten las estructuras en arreglos estáticos. Los nodos de las listas enlazadas, las listas de adyacencia y las cadenas de colisión se crean durante la ejecución.
