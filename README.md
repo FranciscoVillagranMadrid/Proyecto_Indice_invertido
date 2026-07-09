@@ -97,7 +97,7 @@ Top 10
 Top 20
 ```
 
-Cuando dos términos tienen la misma frecuencia, se ordenan alfabéticamente. Esto no cambia el conteo, pero deja la salida más estable para la defensa.
+Cuando dos términos tienen la misma frecuencia, se ordenan alfabéticamente. Esto no cambia el conteo.
 
 ## Menú principal
 
